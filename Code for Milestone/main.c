@@ -3,6 +3,7 @@
 
 /**
  * main.c
+ * Authored by: DJ Stahlberger and Christopher Satriale
  */
 void LEDSetup(void){
 
