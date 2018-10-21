@@ -13,22 +13,22 @@ void PinSetup(void){
 
     //P1.6 -- Red -- TA0CCR0
     P1SEL |= BIT6;
-    P1SEL2 &= ~BIT6;             //Connects P1.6 to TimerA
+    P1SEL2 &= ~BIT6;            //Connects P1.6 to TimerA
     P1DIR |= BIT6;              //Sets output direction
 
     //P2.1 -- Green -- TA1CCR1
     P2SEL |= BIT1;
-    P2SEL2 &= ~BIT1;             //Connects P2.1 to TimerA
+    P2SEL2 &= ~BIT1;            //Connects P2.1 to TimerA
     P2DIR |= BIT1;              //Sets output direction
 
     //P2.4 -- Blue -- TA1CCR2
     P2SEL |= BIT4;
-    P2SEL2 &= ~BIT4;             //Connects P2.4 to TimerA
+    P2SEL2 &= ~BIT4;            //Connects P2.4 to TimerA
     P2DIR |= BIT4;              //Sets output direction
 
-
-    P1DIR |= BIT0;
-    P1OUT &= ~BIT0;
+    //On Board LED Initialization
+    P1DIR |= BIT0;              //Sets P1.0 to output
+    P1OUT &= ~BIT0;             //Turns it off
 
 }
 
@@ -67,8 +67,6 @@ void UARTsetup(void){
 
     UCA0CTL1 &= ~UCSWRST;                        //Disables UART reset
     UC0IE |= UCA0RXIE;                           //Enables UART interrupt
-
-    //UC0IE |= UCA0TXIE;
 }
 
 void main(void){
@@ -84,19 +82,15 @@ void main(void){
 
 
 
-//TA0CCR1 = RED
-//TA1CCR1 = GREEN
-//TA1CCR2 = BLUE
-//UCA0RXBUF DATA RECIEVED
-//UCA0TXBUF DATA TRANSMITTED
+
 #pragma vector = USCIAB0RX_VECTOR;              //Setting the interrupt condition for the button press
 __interrupt void usciaborx (void){
 
-    P1OUT |= BIT0;
+    P1OUT |= BIT0;                              //Turns on board LED when data received
 
     char data = UCA0RXBUF;                      //stores byte from UART into data char
 
-    UC0IE |= UCA0TXIE;
+    UC0IE |= UCA0TXIE;                          //Enables TX based interrupt
 
     if(count == 0){                             //Initial if statement designed to run at the first package byte
         count = data;                           //count gets the number of bytes in the package
@@ -104,34 +98,32 @@ __interrupt void usciaborx (void){
         total = data;                           //total also gets number of bytes in the package
 
 
-        if(data >=8){ //| (data-2)%3 == 0)          //More than 8 bytes left or there are enough
-                                                //bytes for another node to use
+        if(data >=8){                           //More than 8 bytes left
             UCA0TXBUF = data - 3;               //package size gets sent to the next node
         }
     }
 
-    else if(total - count == 1){                 //if the byte being read is directly after the size byte
+    else if(total - count == 1){                //if the byte being read is directly after the size byte
         TA0CCR1 = data;                         //set the value for the red
     }
 
-    else if(total - count == 2){                  //if the byte being read is 2 after the size byte
+    else if(total - count == 2){                //if the byte being read is 2 after the size byte
         TA1CCR1 = data;                         //set the value for the green
     }
 
-    else if(total - count == 3){                  //if the byte being read is 3 after the size byte
+    else if(total - count == 3){                //if the byte being read is 3 after the size byte
         TA1CCR2 = data;                         //sets the value for the blue
     }
 
     else{
-        if(total >=8){// | (data-2)%3 == 0){          //more than 8 bytes left or there are enough
-                                                //bytes for another node to use
+        if(total >=8){                          //more than 8 bytes left
             UCA0TXBUF = data;                   //transmit the byte to the next node
         }
     }
 
     count --;                                    //incrementally counts down from the total package size until 0
 
-    P1OUT &= ~BIT0;
+    P1OUT &= ~BIT0;                              //Turns off LED once data is used
 
 }
 
@@ -140,13 +132,13 @@ __interrupt void usciaborx (void){
 
 
 
-#pragma vector = USCIAB0TX_VECTOR;
-__interrupt void usciab0tx (void){
+#pragma vector = USCIAB0TX_VECTOR;              //TX based interrupt
+__interrupt void usciab0tx (void){              //Triggers when a message is sent
 
-    P1OUT |= BIT0;
+    P1OUT |= BIT0;                              //Turns on LED
 
-    UC0IE &= ~UCA0TXIE;
-    P1OUT &= ~BIT0;
+    UC0IE &= ~UCA0TXIE;                         //Resets interrupt
+    P1OUT &= ~BIT0;                             //Turns LED off
 }
 
 
